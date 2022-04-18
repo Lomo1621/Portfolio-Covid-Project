@@ -120,3 +120,44 @@ JOIN covidvaccinations vac
 	ON dea.location = vac.location
     AND dea.date = vac.date
 WHERE dea.continent != ''
+
+
+-- Queries I use to create Visualizations in Tableau
+
+-- 1. Calculating the total cases, deaths, death percentage
+
+SELECT SUM(new_cases) AS total_cases, SUM(new_deaths) AS total_deaths, 
+	SUM(new_deaths) / SUM(new_cases) * 100 AS DeathPercentage
+FROM coviddeaths
+WHERE continent != ''
+
+-- 2. Find the numbers for the specific locations, excluding regions European Union, High Income, International, and Low Income to
+-- avoid double counting and stay consistent. For some reason Asia is excluded in the location column, so I need to use the Union statement.
+
+(SELECT location, SUM(new_deaths) AS total_deaths
+FROM coviddeaths
+WHERE continent = ''
+	AND location NOT IN ('European Union', 'High Income', 'International', 'Low Income')
+GROUP BY location)
+UNION
+(SELECT continent, SUM(new_deaths) AS total_deaths
+FROM coviddeaths
+WHERE continent = 'Asia'
+GROUP BY continent )
+ORDER BY total_deaths DESC
+
+-- 3. Calculating the percentage of infected people in each country
+
+
+SELECT location, population, MAX(total_cases) AS HighestInfectionCount, MAX((total_cases / population)) * 100 AS PercentPopInfected
+FROM coviddeaths
+WHERE continent != ''
+GROUP BY location, population
+ORDER BY PercentPopInfected DESC
+
+-- 4. Calculate the Infection rate per day per location
+
+SELECT location, population, date, MAX(total_cases) AS HighestInfectionCount, MAX((total_cases / population)) * 100 AS PercentPopInfected
+FROM coviddeaths
+GROUP BY location, population, date
+ORDER BY PercentPopInfected DESC 
